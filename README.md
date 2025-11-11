@@ -18,8 +18,8 @@ FixText is a tiny macOS helper that fixes grammar and wording using Google’s G
 
 ### 3. Add your Gemini API key
 1. Double-click `FixText.app`.
-2. Click **Gemini API Key**, paste your key, and hit **Save Key**.  
-   The key stays in your macOS Keychain, so you only enter it once.
+2. Click **Gemini API Key**, paste your key from <https://aistudio.google.com/app/apikey>, and hit **Save Key**.  
+   (Sign into your Google account, tap “Create API key,” copy it.) The key stays in your Keychain, so you only enter it once.
 
 ### 4. Daily workflow
 1. Copy the text you want to fix.
