@@ -1,42 +1,66 @@
 # FixText
 
-Small macOS helper that lets you jot down a prompt, send it to the Gemini API, and instantly copy the response to your clipboard. The app keeps a semi–transparent window ready to go and can be toggled at any time with a global shortcut.
+FixText is a tiny macOS helper that fixes grammar and wording using Google’s Gemini models. Copy any text, tap a global shortcut, and your corrected text appears on the clipboard moments later.
 
-## Requirements
+---
 
-- macOS 13 or later
-- Swift 6 toolchain (Xcode 15.3+ or the standalone Command Line Tools)
-- A Gemini API key (<https://aistudio.google.com/app/apikey>)
+## For non-technical folks
 
-## Running the app
+### 1. Download everything
+1. Go to <https://github.com/andreseloyasanchezva/fixtext>.
+2. Click the green **Code** button, then **Download ZIP**.
+3. Double-click the ZIP to get the `fixtext` folder.
 
+### 2. Install FixText.app
+1. Open the `fixtext` folder.
+2. Double-click `build_fixtext_app.sh` (or run it from Terminal with `bash build_fixtext_app.sh`).  
+   This compiles the app and creates `FixText.app` in the same folder.
+3. Drag `FixText.app` anywhere you like (Applications is fine).
+
+### 3. Add your Gemini API key
+1. Double-click `FixText.app`.
+2. Click **Gemini API Key**, paste your key, and hit **Save Key**.  
+   The key stays in your macOS Keychain, so you only enter it once.
+
+### 4. Daily workflow
+1. Copy the text you want to fix.
+2. Press `⌥⌘U` (Option + Command + U).  
+   - The FixText window pops up on top.  
+   - Your clipboard text auto-fills and is sent to Gemini instantly.  
+3. Wait a second for the corrected text to appear (FixText copies it to your clipboard).
+4. Press `⌥⌘U` again to hide the window.
+5. Paste wherever you need—the clipboard already has the corrected text.
+
+That’s it! From now on: copy → `⌥⌘U` → wait → `⌥⌘U` → paste.
+
+---
+
+## For technical users
+
+### Requirements
+- macOS 13+
+- Swift 6 toolchain (`xcode-select --install` or Xcode 15.3+)
+- Gemini API key (<https://aistudio.google.com/app/apikey>)
+
+### Clone & run
 ```bash
-cd /path/to/fixtext
+git clone https://github.com/andreseloyasanchezva/fixtext
+cd fixtext
 swift run FixText
 ```
 
-`swift run` builds the SwiftUI executable and launches the translucent window. Keep the process running to continue using the global shortcut.
+### Build the .app bundle
+```bash
+bash build_fixtext_app.sh
+open FixText.app  # or drag it to /Applications
+```
 
-### Add your Gemini key in-app
+### Behavior overview
+- SwiftUI + AppKit hybrid window, semi-transparent, always floats.
+- Global shortcut `⌥⌘U` registered via Carbon hotkey API.
+- Clipboard text auto-fills the editor on each toggle and immediately submits to `gemini-2.5-flash-lite`.
+- Prompt automatically gets prefixed with “Fix the following text…” to force explanation-free replies.
+- Responses are copied to the clipboard, pasted board is cleared before writes.
+- API key stored securely in Keychain; UI hides the input once a key exists.
 
-1. Open the **Gemini API Key** box at the top of the window.
-2. Paste your key into the secure field and press **Save Key**.
-3. The key is stored in the macOS Keychain, so you only have to do this once.
-4. Use **Delete Key** anytime you want to remove the stored credential.
-
-## Keyboard shortcut
-
-- `⌘⌥U` toggles the window (registers at launch). You can change the key combination inside `HotKeyManager.register`.
-- When summoned, the window floats above everything else so you can jot text without hunting for focus.
-- As soon as the shortcut brings the window forward, the current clipboard text auto-fills the editor and immediately sends to Gemini so you get a corrected result without clicking anything.
-
-Whenever the window becomes visible it gains focus automatically and the text editor is ready for input.
-
-## Workflow
-
-1. Type your prompt in the editor (or just copy text and hit `⌘⌥U` to auto-populate and send).
-2. Hit **Send to Gemini** (or `⌘↩`) to call the API.
-3. The app sends your text as `Fix the following text:` so Gemini returns only the corrected content—no explanations.
-4. The response (from `gemini-2.5-flash-lite`) appears in the lower panel, is copied to the clipboard, and the window stays semi-transparent so you can keep context.
-
-Errors (such as missing API keys or HTTP failures) are displayed inline above the response area.
+Modify the shortcut or prompt logic in `Sources/FixTextApp/HotKeyManager.swift` and `AppViewModel.swift`. Rebuild with `swift run FixText` or `swift build -c release`.
