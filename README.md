@@ -13,9 +13,8 @@ FixText is a tiny macOS helper that fixes grammar and wording using Google’s G
 
 ### 2. Install FixText.app
 1. Open the `fixtext` folder.
-2. Double-click `build_fixtext_app.sh` (or run it from Terminal with `bash build_fixtext_app.sh`).  
-   This compiles the app and creates `FixText.app` in the same folder.
-3. Drag `FixText.app` anywhere you like (Applications is fine).
+2. Drag the included `FixText.app` into Applications (or anywhere you prefer).  
+   *(Only run `build_fixtext_app.sh` if you want to rebuild from source.)*
 
 ### 3. Add your Gemini API key
 1. Double-click `FixText.app`.
@@ -51,8 +50,8 @@ swift run FixText
 
 ### Build the .app bundle
 ```bash
-bash build_fixtext_app.sh
-open FixText.app  # or drag it to /Applications
+bash build_fixtext_app.sh   # optional: regenerates FixText.app from source
+open FixText.app
 ```
 
 ### Behavior overview
