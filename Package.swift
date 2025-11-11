@@ -2,19 +2,19 @@
 import PackageDescription
 
 let package = Package(
-    name: "FixTextApp",
+    name: "FixText",
     platforms: [
         .macOS(.v13)
     ],
     products: [
         .executable(
-            name: "FixTextApp",
-            targets: ["FixTextApp"]
+            name: "FixText",
+            targets: ["FixText"]
         )
     ],
     targets: [
         .executableTarget(
-            name: "FixTextApp",
+            name: "FixText",
             path: "Sources/FixTextApp"
         )
     ]

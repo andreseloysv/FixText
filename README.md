@@ -12,7 +12,7 @@ Small macOS helper that lets you jot down a prompt, send it to the Gemini API, a
 
 ```bash
 cd /path/to/fixtext
-swift run FixTextApp
+swift run FixText
 ```
 
 `swift run` builds the SwiftUI executable and launches the translucent window. Keep the process running to continue using the global shortcut.

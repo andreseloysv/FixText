@@ -13,7 +13,7 @@ enum APIKeyStore {
         }
     }
 
-    private static let service = "FixTextApp"
+    private static let service = "FixText"
     private static let account = "GeminiAPIKey"
 
     static func load() throws -> String? {

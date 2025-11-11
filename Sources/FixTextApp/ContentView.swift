@@ -6,35 +6,39 @@ struct ContentView: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
-            GroupBox("Gemini API Key") {
-                VStack(alignment: .leading, spacing: 8) {
-                    SecureField("Enter your API key", text: $viewModel.apiKeyInput)
-                        .textFieldStyle(.roundedBorder)
+            Text("Use ⌥⌘U to hide or display this app")
+                .font(.title3.bold())
+                .padding(.bottom, 4)
 
-                    HStack(spacing: 10) {
-                        Button("Save Key") {
-                            viewModel.saveAPIKey()
-                        }
-                        .disabled(viewModel.apiKeyInput.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
-
-                        Button("Delete Key") {
-                            viewModel.deleteAPIKey()
-                        }
-                        .disabled(!viewModel.hasStoredKey)
-
-                        if viewModel.hasStoredKey {
-                            Label("Key saved", systemImage: "checkmark.shield.fill")
-                                .foregroundStyle(.green)
-                                .font(.footnote)
-                        }
-
-                        Spacer()
+            if viewModel.hasStoredKey {
+                HStack(spacing: 10) {
+                    Label("API key saved", systemImage: "checkmark.shield.fill")
+                        .foregroundStyle(.green)
+                    Button("Delete Key") {
+                        viewModel.deleteAPIKey()
                     }
+                }
+                .padding(.vertical, 4)
+            } else {
+                GroupBox("Gemini API Key") {
+                    VStack(alignment: .leading, spacing: 8) {
+                        SecureField("Enter your API key", text: $viewModel.apiKeyInput)
+                            .textFieldStyle(.roundedBorder)
 
-                    if let status = viewModel.keyStatusMessage {
-                        Text(status)
-                            .font(.footnote)
-                            .foregroundStyle(.secondary)
+                        HStack(spacing: 10) {
+                            Button("Save Key") {
+                                viewModel.saveAPIKey()
+                            }
+                            .disabled(viewModel.apiKeyInput.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
+
+                            Spacer()
+                        }
+
+                        if let status = viewModel.keyStatusMessage {
+                            Text(status)
+                                .font(.footnote)
+                                .foregroundStyle(.secondary)
+                        }
                     }
                 }
             }
