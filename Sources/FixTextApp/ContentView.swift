@@ -76,8 +76,8 @@ struct ContentView: View {
                     Text(error)
                         .font(.footnote)
                         .foregroundStyle(.red)
-                } else if !viewModel.response.isEmpty {
-                    Text("Response copied to clipboard")
+                } else if let status = viewModel.responseStatusMessage {
+                    Text(status)
                         .font(.footnote)
                         .foregroundStyle(.secondary)
                 }

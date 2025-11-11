@@ -11,9 +11,12 @@ final class AppViewModel: ObservableObject {
     @Published var apiKeyInput: String = ""
     @Published private(set) var hasStoredKey: Bool = false
     @Published var keyStatusMessage: String?
+    @Published var responseStatusMessage: String?
 
     private let service = GeminiService()
     private var storedKey: String?
+    var responseHandler: ((String) -> Bool)?
+    var responseHandlerToken: UUID?
 
     init() {
         loadStoredKey()
@@ -29,9 +32,11 @@ final class AppViewModel: ObservableObject {
         guard !trimmed.isEmpty else { return }
 
         let text = prompt
+        let handlerToken = responseHandlerToken
         Task {
+            responseStatusMessage = nil
             let preparedPrompt = buildInstructionPrompt(for: text)
-            await sendRequest(text: preparedPrompt, apiKey: key)
+            await sendRequest(text: preparedPrompt, apiKey: key, handlerToken: handlerToken)
         }
     }
 
@@ -85,7 +90,14 @@ final class AppViewModel: ObservableObject {
         guard let clipboardText = pasteboard.string(forType: .string), !clipboardText.isEmpty else {
             return false
         }
-        prompt = clipboardText
+
+        return prefillPrompt(with: clipboardText, autoSubmit: autoSubmit)
+    }
+
+    @discardableResult
+    func prefillPrompt(with text: String, autoSubmit: Bool = false) -> Bool {
+        guard !text.isEmpty else { return false }
+        prompt = text
 
         if autoSubmit {
             submitPrompt()
@@ -102,14 +114,29 @@ final class AppViewModel: ObservableObject {
         """
     }
 
-    private func sendRequest(text: String, apiKey: String) async {
+    private func sendRequest(text: String, apiKey: String, handlerToken: UUID?) async {
         isLoading = true
         errorMessage = nil
+        responseStatusMessage = nil
 
         do {
             let reply = try await service.send(prompt: text, apiKey: apiKey)
             response = reply
-            copyToClipboard(reply)
+            var handledExternally = false
+
+            if let handler = responseHandler {
+                if let handlerToken,
+                   handlerToken == responseHandlerToken {
+                    responseHandler = nil
+                    responseHandlerToken = nil
+                    handledExternally = handler(reply)
+                }
+            }
+
+            if !handledExternally {
+                copyToClipboard(reply)
+                responseStatusMessage = "Response copied to clipboard."
+            }
         } catch {
             errorMessage = error.localizedDescription
         }

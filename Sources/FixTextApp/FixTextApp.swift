@@ -31,6 +31,8 @@ struct FixTextApp: App {
 final class AppDelegate: NSObject, NSApplicationDelegate {
     private(set) weak var window: NSWindow?
     weak var viewModel: AppViewModel?
+    private let selectionCapture = SelectionCaptureService()
+    private var pendingSelectionSession: SelectionSession?
 
     func applicationDidFinishLaunching(_ notification: Notification) {
         NSApp.setActivationPolicy(.regular)
@@ -59,11 +61,40 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
         if window.isVisible {
             window.orderOut(nil)
-        } else {
+            clearSelectionSession()
+            return
+        }
+
+        let shouldActivateApp = NSApp.isActive
+
+        Task { [weak self] in
+            guard let self, let window = self.window else { return }
+            await self.presentWindowWithSelection(window: window, activateApp: shouldActivateApp)
+        }
+    }
+
+    private func presentWindowWithSelection(window: NSWindow, activateApp: Bool) async {
+        let sourceApp = NSWorkspace.shared.frontmostApplication
+        let captureResult = activateApp ? nil : await selectionCapture.captureSelectedText()
+
+        if activateApp {
+            clearSelectionSession()
             NSApp.activate(ignoringOtherApps: true)
             window.makeKeyAndOrderFront(nil)
+        } else {
             window.orderFrontRegardless()
+        }
+
+        if let captureResult {
+            startSelectionSession(with: captureResult, sourceApp: sourceApp)
+            viewModel?.prefillPrompt(with: captureResult.text, autoSubmit: true)
+            captureResult.restoreClipboard()
+        } else if !activateApp {
+            clearSelectionSession()
             viewModel?.prefillPromptFromClipboard(autoSubmit: true)
+        }
+
+        if activateApp {
             viewModel?.forceFocus()
         }
     }
@@ -78,5 +109,71 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         window.level = .floating
         window.standardWindowButton(.miniaturizeButton)?.isHidden = true
         window.standardWindowButton(.zoomButton)?.isHidden = true
+    }
+
+    private func startSelectionSession(
+        with captureResult: SelectionCaptureService.CaptureResult,
+        sourceApp: NSRunningApplication?
+    ) {
+        let session = SelectionSession(captureResult: captureResult, sourceApp: sourceApp)
+        pendingSelectionSession = session
+        viewModel?.responseHandlerToken = session.id
+        viewModel?.responseHandler = { [weak self] text in
+            self?.handleSelectionResponse(text: text, sessionID: session.id) ?? false
+        }
+    }
+
+    private func handleSelectionResponse(text: String, sessionID: UUID) -> Bool {
+        guard let session = pendingSelectionSession, session.id == sessionID else {
+            return false
+        }
+
+        pendingSelectionSession = nil
+
+        Task { [weak self] in
+            await self?.applySelectionReplacement(text: text, session: session)
+        }
+
+        return true
+    }
+
+    private func applySelectionReplacement(text: String, session: SelectionSession) async {
+        guard !text.isEmpty else {
+            viewModel?.responseStatusMessage = "Empty response – nothing to insert."
+            session.captureResult.restoreClipboard()
+            return
+        }
+
+        if let sourceApp = session.sourceApp {
+            let frontmostPID = NSWorkspace.shared.frontmostApplication?.processIdentifier
+            if frontmostPID != sourceApp.processIdentifier {
+                let activated = sourceApp.activate(options: [])
+                if !activated {
+                    viewModel?.responseStatusMessage = "Couldn’t focus the original app."
+                    session.captureResult.restoreClipboard()
+                    return
+                }
+                try? await Task.sleep(nanoseconds: 80_000_000)
+            }
+        }
+
+        let replaced = await selectionCapture.replaceSelection(with: text)
+        session.captureResult.restoreClipboard()
+
+        viewModel?.responseStatusMessage = replaced
+            ? "Selection updated."
+            : "Couldn’t update the selection."
+    }
+
+    private func clearSelectionSession() {
+        pendingSelectionSession = nil
+        viewModel?.responseHandler = nil
+        viewModel?.responseHandlerToken = nil
+    }
+
+    private struct SelectionSession {
+        let id = UUID()
+        let captureResult: SelectionCaptureService.CaptureResult
+        let sourceApp: NSRunningApplication?
     }
 }
