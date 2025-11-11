@@ -1,5 +1,6 @@
 import SwiftUI
 import AppKit
+import Carbon.HIToolbox
 
 @main
 struct FixTextApp: App {
@@ -33,6 +34,12 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     weak var viewModel: AppViewModel?
     private let selectionCapture = SelectionCaptureService()
     private var pendingSelectionSession: SelectionSession?
+    private var confirmKeyTap: CFMachPort?
+    private var confirmKeyRunLoopSource: CFRunLoopSource?
+    private let confirmKeyCodes: Set<CGKeyCode> = [
+        CGKeyCode(kVK_Return),
+        CGKeyCode(kVK_ANSI_KeypadEnter)
+    ]
 
     func applicationDidFinishLaunching(_ notification: Notification) {
         NSApp.setActivationPolicy(.regular)
@@ -50,6 +57,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         guard self.window !== window else { return }
         self.window = window
         configure(window: window)
+        viewModel?.selectionConfirmAction = { [weak self] in
+            self?.confirmPendingSelectionResponse()
+        }
         viewModel?.prefillPromptFromClipboard()
         NSApp.activate(ignoringOtherApps: true)
         window.makeKeyAndOrderFront(nil)
@@ -117,6 +127,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     ) {
         let session = SelectionSession(captureResult: captureResult, sourceApp: sourceApp)
         pendingSelectionSession = session
+        viewModel?.selectionResponseReady = false
         viewModel?.responseHandlerToken = session.id
         viewModel?.responseHandler = { [weak self] text in
             self?.handleSelectionResponse(text: text, sessionID: session.id) ?? false
@@ -128,13 +139,42 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             return false
         }
 
-        pendingSelectionSession = nil
+        session.pendingResponse = text
+        viewModel?.responseHandler = nil
+        viewModel?.responseHandlerToken = nil
 
-        Task { [weak self] in
-            await self?.applySelectionReplacement(text: text, session: session)
+        if text.isEmpty {
+            pendingSelectionSession = nil
+            viewModel?.selectionResponseReady = false
+            viewModel?.responseStatusMessage = "Empty response – nothing to insert."
+            return true
         }
 
+        viewModel?.selectionResponseReady = true
+        viewModel?.responseStatusMessage = "Press Enter to apply to the selection."
+        startConfirmKeyCapture()
         return true
+    }
+
+    private func confirmPendingSelectionResponse() {
+        guard let session = pendingSelectionSession else { return }
+        stopConfirmKeyCapture()
+
+        guard
+            let response = session.pendingResponse,
+            !response.isEmpty
+        else {
+            viewModel?.responseStatusMessage = "Waiting for Gemini response…"
+            return
+        }
+
+        pendingSelectionSession = nil
+        viewModel?.selectionResponseReady = false
+        window?.orderOut(nil)
+
+        Task { [weak self] in
+            await self?.applySelectionReplacement(text: response, session: session)
+        }
     }
 
     private func applySelectionReplacement(text: String, session: SelectionSession) async {
@@ -169,11 +209,93 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         pendingSelectionSession = nil
         viewModel?.responseHandler = nil
         viewModel?.responseHandlerToken = nil
+        viewModel?.selectionResponseReady = false
+        stopConfirmKeyCapture()
     }
 
-    private struct SelectionSession {
+    private final class SelectionSession {
         let id = UUID()
         let captureResult: SelectionCaptureService.CaptureResult
         let sourceApp: NSRunningApplication?
+        var pendingResponse: String?
+
+        init(
+            captureResult: SelectionCaptureService.CaptureResult,
+            sourceApp: NSRunningApplication?
+        ) {
+            self.captureResult = captureResult
+            self.sourceApp = sourceApp
+        }
+    }
+
+    private func startConfirmKeyCapture() {
+        guard confirmKeyTap == nil else { return }
+
+        let eventMask = CGEventMask(1 << CGEventType.keyDown.rawValue)
+        let refcon = UnsafeMutableRawPointer(Unmanaged.passUnretained(self).toOpaque())
+
+        guard let tap = CGEvent.tapCreate(
+            tap: .cgSessionEventTap,
+            place: .headInsertEventTap,
+            options: .defaultTap,
+            eventsOfInterest: eventMask,
+            callback: { _, type, event, refcon in
+                guard let refcon else {
+                    return Unmanaged.passUnretained(event)
+                }
+
+                let delegate = Unmanaged<AppDelegate>
+                    .fromOpaque(refcon)
+                    .takeUnretainedValue()
+
+                return delegate.handleConfirmKeyEvent(type: type, event: event)
+            },
+            userInfo: refcon
+        ) else {
+            return
+        }
+
+        confirmKeyTap = tap
+        let source = CFMachPortCreateRunLoopSource(kCFAllocatorDefault, tap, 0)
+        confirmKeyRunLoopSource = source
+        CFRunLoopAddSource(CFRunLoopGetMain(), source, .defaultMode)
+        CGEvent.tapEnable(tap: tap, enable: true)
+    }
+
+    private func stopConfirmKeyCapture() {
+        if let tap = confirmKeyTap {
+            CGEvent.tapEnable(tap: tap, enable: false)
+        }
+
+        if let source = confirmKeyRunLoopSource {
+            CFRunLoopRemoveSource(CFRunLoopGetMain(), source, .defaultMode)
+        }
+
+        confirmKeyRunLoopSource = nil
+        confirmKeyTap = nil
+    }
+
+    private func handleConfirmKeyEvent(
+        type: CGEventType,
+        event: CGEvent
+    ) -> Unmanaged<CGEvent>? {
+        guard type == .keyDown else {
+            return Unmanaged.passUnretained(event)
+        }
+
+        let keyCode = CGKeyCode(event.getIntegerValueField(.keyboardEventKeycode))
+        guard
+            confirmKeyCodes.contains(keyCode),
+            viewModel?.selectionResponseReady == true
+        else {
+            return Unmanaged.passUnretained(event)
+        }
+
+        stopConfirmKeyCapture()
+        DispatchQueue.main.async { [weak self] in
+            self?.confirmPendingSelectionResponse()
+        }
+
+        return nil
     }
 }

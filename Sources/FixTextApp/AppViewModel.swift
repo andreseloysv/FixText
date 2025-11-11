@@ -12,11 +12,13 @@ final class AppViewModel: ObservableObject {
     @Published private(set) var hasStoredKey: Bool = false
     @Published var keyStatusMessage: String?
     @Published var responseStatusMessage: String?
+    @Published var selectionResponseReady: Bool = false
 
     private let service = GeminiService()
     private var storedKey: String?
     var responseHandler: ((String) -> Bool)?
     var responseHandlerToken: UUID?
+    var selectionConfirmAction: (() -> Void)?
 
     init() {
         loadStoredKey()
@@ -33,6 +35,9 @@ final class AppViewModel: ObservableObject {
 
         let text = prompt
         let handlerToken = responseHandlerToken
+        if handlerToken != nil {
+            selectionResponseReady = false
+        }
         Task {
             responseStatusMessage = nil
             let preparedPrompt = buildInstructionPrompt(for: text)
@@ -42,6 +47,11 @@ final class AppViewModel: ObservableObject {
 
     func forceFocus() {
         focusToken = UUID()
+    }
+
+    func confirmSelectionReplacement() {
+        guard selectionResponseReady else { return }
+        selectionConfirmAction?()
     }
 
     func saveAPIKey() {

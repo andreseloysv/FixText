@@ -72,6 +72,13 @@ struct ContentView: View {
                 .keyboardShortcut(.return, modifiers: [.command])
                 .disabled(viewModel.isLoading)
 
+                if viewModel.selectionResponseReady {
+                    Button("Apply & Hide") {
+                        viewModel.confirmSelectionReplacement()
+                    }
+                    .keyboardShortcut(.defaultAction)
+                }
+
                 if let error = viewModel.errorMessage {
                     Text(error)
                         .font(.footnote)
