@@ -36,12 +36,28 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     private var pendingSelectionSession: SelectionSession?
     private var confirmKeyTap: CFMachPort?
     private var confirmKeyRunLoopSource: CFRunLoopSource?
+    private var confirmKeyTapRefcon: UnsafeMutableRawPointer?
     private let confirmKeyCodes: Set<CGKeyCode> = [
         CGKeyCode(kVK_Return),
         CGKeyCode(kVK_ANSI_KeypadEnter)
     ]
 
+    private func logState(function: String = #function) {
+        LogManager.shared.log("---")
+        LogManager.shared.log("AppDelegate state in \(function):")
+        LogManager.shared.log("  - window: \(window.debugDescription)")
+        LogManager.shared.log("  - viewModel: \(viewModel.debugDescription)")
+        LogManager.shared.log("  - pendingSelectionSession: \(pendingSelectionSession.debugDescription)")
+        LogManager.shared.log("  - confirmKeyTap: \(confirmKeyTap.debugDescription)")
+        LogManager.shared.log("  - confirmKeyRunLoopSource: \(confirmKeyRunLoopSource.debugDescription)")
+        LogManager.shared.log("  - confirmKeyTapRefcon: \(confirmKeyTapRefcon.debugDescription)")
+        viewModel?.logState()
+        LogManager.shared.log("---")
+    }
+
     func applicationDidFinishLaunching(_ notification: Notification) {
+        LogManager.shared.deleteLogFile()
+        logState()
         NSApp.setActivationPolicy(.regular)
         NSApp.activate(ignoringOtherApps: true)
         HotKeyManager.shared.register(handler: { [weak self] in
@@ -49,11 +65,19 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         })
     }
 
+    func applicationDidBecomeActive(_ notification: Notification) {
+        logState()
+        clearSelectionSession()
+    }
+
     func applicationWillTerminate(_ notification: Notification) {
+        logState()
         HotKeyManager.shared.unregister()
+        selectionCapture.clearPasteboard()
     }
 
     func register(window: NSWindow) {
+        logState()
         guard self.window !== window else { return }
         self.window = window
         configure(window: window)
@@ -67,6 +91,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     }
 
     func toggleWindow() {
+        logState()
         guard let window = window else { return }
 
         if window.isVisible {
@@ -84,6 +109,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     }
 
     private func presentWindowWithSelection(window: NSWindow, activateApp: Bool) async {
+        logState()
         let sourceApp = NSWorkspace.shared.frontmostApplication
         let captureResult = activateApp ? nil : await selectionCapture.captureSelectedText()
 
@@ -98,7 +124,6 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         if let captureResult {
             startSelectionSession(with: captureResult, sourceApp: sourceApp)
             viewModel?.prefillPrompt(with: captureResult.text, autoSubmit: true)
-            captureResult.restoreClipboard()
         } else if !activateApp {
             clearSelectionSession()
             viewModel?.prefillPromptFromClipboard(autoSubmit: true)
@@ -110,6 +135,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     }
 
     private func configure(window: NSWindow) {
+        logState()
         window.titleVisibility = .hidden
         window.titlebarAppearsTransparent = true
         window.isOpaque = false
@@ -125,6 +151,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         with captureResult: SelectionCaptureService.CaptureResult,
         sourceApp: NSRunningApplication?
     ) {
+        logState()
         let session = SelectionSession(captureResult: captureResult, sourceApp: sourceApp)
         pendingSelectionSession = session
         viewModel?.selectionResponseReady = false
@@ -135,6 +162,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     }
 
     private func handleSelectionResponse(text: String, sessionID: UUID) -> Bool {
+        logState()
         guard let session = pendingSelectionSession, session.id == sessionID else {
             return false
         }
@@ -157,6 +185,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     }
 
     private func confirmPendingSelectionResponse() {
+        logState()
         guard let session = pendingSelectionSession else { return }
         stopConfirmKeyCapture()
 
@@ -178,6 +207,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     }
 
     private func applySelectionReplacement(text: String, session: SelectionSession) async {
+        logState()
         guard !text.isEmpty else {
             viewModel?.responseStatusMessage = "Empty response – nothing to insert."
             session.captureResult.restoreClipboard()
@@ -206,10 +236,12 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     }
 
     private func clearSelectionSession() {
+        logState()
         pendingSelectionSession = nil
         viewModel?.responseHandler = nil
         viewModel?.responseHandlerToken = nil
         viewModel?.selectionResponseReady = false
+        viewModel?.reset()
         stopConfirmKeyCapture()
     }
 
@@ -229,10 +261,12 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     }
 
     private func startConfirmKeyCapture() {
+        logState()
         guard confirmKeyTap == nil else { return }
 
         let eventMask = CGEventMask(1 << CGEventType.keyDown.rawValue)
-        let refcon = UnsafeMutableRawPointer(Unmanaged.passUnretained(self).toOpaque())
+        let refcon = UnsafeMutableRawPointer(Unmanaged.passRetained(self).toOpaque())
+        confirmKeyTapRefcon = refcon
 
         guard let tap = CGEvent.tapCreate(
             tap: .cgSessionEventTap,
@@ -252,6 +286,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             },
             userInfo: refcon
         ) else {
+            stopConfirmKeyCapture()
             return
         }
 
@@ -263,12 +298,18 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     }
 
     private func stopConfirmKeyCapture() {
+        logState()
         if let tap = confirmKeyTap {
             CGEvent.tapEnable(tap: tap, enable: false)
         }
 
         if let source = confirmKeyRunLoopSource {
             CFRunLoopRemoveSource(CFRunLoopGetMain(), source, .defaultMode)
+        }
+
+        if let refcon = confirmKeyTapRefcon {
+            Unmanaged<AppDelegate>.fromOpaque(refcon).release()
+            confirmKeyTapRefcon = nil
         }
 
         confirmKeyRunLoopSource = nil
@@ -279,8 +320,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         type: CGEventType,
         event: CGEvent
     ) -> Unmanaged<CGEvent>? {
+        logState()
         guard type == .keyDown else {
-            return Unmanaged.passUnretained(event)
+            return Unmanaged.passRetained(event)
         }
 
         let keyCode = CGKeyCode(event.getIntegerValueField(.keyboardEventKeycode))
@@ -288,12 +330,14 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             confirmKeyCodes.contains(keyCode),
             viewModel?.selectionResponseReady == true
         else {
-            return Unmanaged.passUnretained(event)
+            return Unmanaged.passRetained(event)
         }
 
         stopConfirmKeyCapture()
         DispatchQueue.main.async { [weak self] in
-            self?.confirmPendingSelectionResponse()
+            Task { [weak self] in
+                self?.confirmPendingSelectionResponse()
+            }
         }
 
         return nil

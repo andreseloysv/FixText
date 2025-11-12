@@ -1,20 +1,31 @@
 import AppKit
 import Carbon.HIToolbox
 
-@MainActor
-final class HotKeyManager {
+final class HotKeyManager: @unchecked Sendable {
     static let shared = HotKeyManager()
 
     private var hotKeyRef: EventHotKeyRef?
     private var handlerRef: EventHandlerRef?
+    private var handlerRefcon: UnsafeMutableRawPointer?
     private var callback: (() -> Void)?
     private let hotKeySignature: FourCharCode = makeFourCharCode("FiTx")
+
+    private func logState(function: String = #function) {
+        LogManager.shared.log("---")
+        LogManager.shared.log("HotKeyManager state in \(function):")
+        LogManager.shared.log("  - hotKeyRef: \(hotKeyRef.debugDescription)")
+        LogManager.shared.log("  - handlerRef: \(handlerRef.debugDescription)")
+        LogManager.shared.log("  - handlerRefcon: \(handlerRefcon.debugDescription)")
+        LogManager.shared.log("  - callback: \(callback.debugDescription)")
+        LogManager.shared.log("---")
+    }
 
     func register(
         keyCode: UInt32 = UInt32(kVK_ANSI_U),
         modifiers: UInt32 = UInt32(cmdKey) | UInt32(optionKey),
         handler: @escaping () -> Void
     ) {
+        logState()
         unregister()
 
         callback = handler
@@ -29,7 +40,7 @@ final class HotKeyManager {
         )
 
         guard registrationStatus == noErr else {
-            print("Hot key registration failed with status \(registrationStatus)")
+            LogManager.shared.log("Hot key registration failed with status \(registrationStatus)")
             return
         }
 
@@ -70,12 +81,13 @@ final class HotKeyManager {
             },
             1,
             &eventType,
-            UnsafeMutableRawPointer(Unmanaged.passUnretained(self).toOpaque()),
+            UnsafeMutableRawPointer(Unmanaged.passRetained(self).toOpaque()),
             &handlerRef
         )
     }
 
     func unregister() {
+        logState()
         if let hotKeyRef {
             UnregisterEventHotKey(hotKeyRef)
             self.hotKeyRef = nil
@@ -84,6 +96,11 @@ final class HotKeyManager {
         if let handlerRef {
             RemoveEventHandler(handlerRef)
             self.handlerRef = nil
+        }
+
+        if let handlerRefcon {
+            Unmanaged<HotKeyManager>.fromOpaque(handlerRefcon).release()
+            self.handlerRefcon = nil
         }
 
         callback = nil

@@ -9,7 +9,14 @@ final class SelectionCaptureService {
         let restoreClipboard: () -> Void
     }
 
+    private func logState(function: String = #function) {
+        LogManager.shared.log("---")
+        LogManager.shared.log("SelectionCaptureService state in \(function):")
+        LogManager.shared.log("---")
+    }
+
     func captureSelectedText(timeout: TimeInterval = 0.6) async -> CaptureResult? {
+        logState()
         let pasteboard = NSPasteboard.general
         let snapshot = snapshotPasteboardItems(pasteboard.pasteboardItems)
         let initialChangeCount = pasteboard.changeCount
@@ -39,6 +46,7 @@ final class SelectionCaptureService {
     }
 
     func replaceSelection(with text: String) async -> Bool {
+        logState()
         guard !text.isEmpty else { return false }
 
         let pasteboard = NSPasteboard.general
@@ -58,6 +66,7 @@ final class SelectionCaptureService {
         initialChangeCount: Int,
         timeout: TimeInterval
     ) async -> Bool {
+        logState()
         let deadline = Date().addingTimeInterval(timeout)
 
         while Date() < deadline {
@@ -72,6 +81,7 @@ final class SelectionCaptureService {
     }
 
     private func sendCopyShortcut() -> Bool {
+        logState()
         guard
             let source = CGEventSource(stateID: .hidSystemState),
             let keyDown = CGEvent(
@@ -94,6 +104,7 @@ final class SelectionCaptureService {
     }
 
     private func sendPasteShortcut() -> Bool {
+        logState()
         guard
             let source = CGEventSource(stateID: .hidSystemState),
             let keyDown = CGEvent(
@@ -116,29 +127,61 @@ final class SelectionCaptureService {
     }
 
     private func send(keyDown: CGEvent, keyUp: CGEvent) {
+        logState()
         keyDown.flags = [.maskCommand]
         keyUp.flags = [.maskCommand]
         keyDown.post(tap: .cghidEventTap)
         keyUp.post(tap: .cghidEventTap)
     }
 
-    private func snapshotPasteboardItems(_ items: [NSPasteboardItem]?) -> [NSPasteboardItem] {
-        guard let items, !items.isEmpty else { return [] }
-
-        return items.map { item in
-            let copy = NSPasteboardItem()
-            for type in item.types {
-                if let data = item.data(forType: type) {
-                    copy.setData(data, forType: type)
-                }
-            }
-            return copy
+    private struct PasteboardSnapshot {
+        struct Item {
+            let types: [NSPasteboard.PasteboardType]
+            let data: [NSPasteboard.PasteboardType: Data]
         }
+
+        let items: [Item]
     }
 
-    private func restorePasteboard(_ pasteboard: NSPasteboard, with items: [NSPasteboardItem]) {
+    private func snapshotPasteboardItems(_ items: [NSPasteboardItem]?) -> PasteboardSnapshot {
+        logState()
+        guard let items, !items.isEmpty else { return PasteboardSnapshot(items: []) }
+
+        let snapshotItems = items.map { item -> PasteboardSnapshot.Item in
+            let types = item.types
+            var data = [NSPasteboard.PasteboardType: Data]()
+            for type in types {
+                if let itemData = item.data(forType: type) {
+                    data[type] = itemData
+                }
+            }
+            return PasteboardSnapshot.Item(types: types, data: data)
+        }
+
+        return PasteboardSnapshot(items: snapshotItems)
+    }
+
+    func clearPasteboard() {
+        logState()
+        let pasteboard = NSPasteboard.general
         pasteboard.clearContents()
-        guard !items.isEmpty else { return }
-        pasteboard.writeObjects(items as [NSPasteboardWriting])
+    }
+
+    private func restorePasteboard(_ pasteboard: NSPasteboard, with snapshot: PasteboardSnapshot) {
+        logState()
+        pasteboard.clearContents()
+        guard !snapshot.items.isEmpty else { return }
+
+        let pasteboardItems = snapshot.items.map { snapshotItem -> NSPasteboardItem in
+            let item = NSPasteboardItem()
+            for type in snapshotItem.types {
+                if let data = snapshotItem.data[type] {
+                    item.setData(data, forType: type)
+                }
+            }
+            return item
+        }
+
+        pasteboard.writeObjects(pasteboardItems)
     }
 }

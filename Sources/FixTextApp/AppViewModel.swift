@@ -20,11 +20,33 @@ final class AppViewModel: ObservableObject {
     var responseHandlerToken: UUID?
     var selectionConfirmAction: (() -> Void)?
 
+    func logState(function: String = #function) {
+        LogManager.shared.log("---")
+        LogManager.shared.log("AppViewModel state in \(function):")
+        LogManager.shared.log("  - prompt: \(prompt)")
+        LogManager.shared.log("  - response: \(response)")
+        LogManager.shared.log("  - isLoading: \(isLoading)")
+        LogManager.shared.log("  - errorMessage: \(errorMessage ?? "nil")")
+        LogManager.shared.log("  - focusToken: \(focusToken)")
+        LogManager.shared.log("  - apiKeyInput: \(apiKeyInput)")
+        LogManager.shared.log("  - hasStoredKey: \(hasStoredKey)")
+        LogManager.shared.log("  - keyStatusMessage: \(keyStatusMessage ?? "nil")")
+        LogManager.shared.log("  - responseStatusMessage: \(responseStatusMessage ?? "nil")")
+        LogManager.shared.log("  - selectionResponseReady: \(selectionResponseReady)")
+        LogManager.shared.log("  - storedKey: \(storedKey ?? "nil")")
+        LogManager.shared.log("  - responseHandler: \(responseHandler.debugDescription)")
+        LogManager.shared.log("  - responseHandlerToken: \(responseHandlerToken.debugDescription)")
+        LogManager.shared.log("  - selectionConfirmAction: \(selectionConfirmAction.debugDescription)")
+        LogManager.shared.log("---")
+    }
+
     init() {
+        logState()
         loadStoredKey()
     }
 
     func submitPrompt() {
+        logState()
         guard let key = storedKey, !key.isEmpty else {
             errorMessage = "Add your Gemini API key first."
             return
@@ -46,15 +68,18 @@ final class AppViewModel: ObservableObject {
     }
 
     func forceFocus() {
+        logState()
         focusToken = UUID()
     }
 
     func confirmSelectionReplacement() {
+        logState()
         guard selectionResponseReady else { return }
         selectionConfirmAction?()
     }
 
     func saveAPIKey() {
+        logState()
         let key = apiKeyInput.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !key.isEmpty else {
             keyStatusMessage = "Enter a valid key before saving."
@@ -73,6 +98,7 @@ final class AppViewModel: ObservableObject {
     }
 
     func deleteAPIKey() {
+        logState()
         do {
             _ = try APIKeyStore.delete()
             storedKey = nil
@@ -84,6 +110,7 @@ final class AppViewModel: ObservableObject {
     }
 
     func loadStoredKey() {
+        logState()
         do {
             storedKey = try APIKeyStore.load()
             hasStoredKey = (storedKey?.isEmpty == false)
@@ -96,6 +123,7 @@ final class AppViewModel: ObservableObject {
 
     @discardableResult
     func prefillPromptFromClipboard(autoSubmit: Bool = false) -> Bool {
+        logState()
         let pasteboard = NSPasteboard.general
         guard let clipboardText = pasteboard.string(forType: .string), !clipboardText.isEmpty else {
             return false
@@ -106,6 +134,7 @@ final class AppViewModel: ObservableObject {
 
     @discardableResult
     func prefillPrompt(with text: String, autoSubmit: Bool = false) -> Bool {
+        logState()
         guard !text.isEmpty else { return false }
         prompt = text
 
@@ -116,8 +145,21 @@ final class AppViewModel: ObservableObject {
         return true
     }
 
+    func reset() {
+        logState()
+        prompt = ""
+        response = ""
+        isLoading = false
+        errorMessage = nil
+        responseStatusMessage = nil
+        selectionResponseReady = false
+        responseHandler = nil
+        responseHandlerToken = nil
+    }
+
     private func buildInstructionPrompt(for userInput: String) -> String {
-        """
+        logState()
+        return """
         Fix the following text and output only the corrected version without any explanation or commentary. Preserve formatting when possible.
         ---
         \(userInput)
@@ -125,6 +167,7 @@ final class AppViewModel: ObservableObject {
     }
 
     private func sendRequest(text: String, apiKey: String, handlerToken: UUID?) async {
+        logState()
         isLoading = true
         errorMessage = nil
         responseStatusMessage = nil
@@ -155,6 +198,7 @@ final class AppViewModel: ObservableObject {
     }
 
     private func copyToClipboard(_ text: String) {
+        logState()
         let pasteboard = NSPasteboard.general
         pasteboard.clearContents()
         pasteboard.setString(text, forType: .string)
