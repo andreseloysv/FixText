@@ -5,21 +5,26 @@ struct ContentView: View {
     @FocusState private var promptIsFocused: Bool
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 12) {
-            Text("Use ⌥⌘U to hide or display this app")
-                .font(.title3.bold())
-                .padding(.bottom, 4)
+        VStack(alignment: .leading, spacing: 0) {
+            HStack {
+                Text("Use ⌥⌘U to hide or display this app")
+                    .font(.title3.bold())
 
-            if viewModel.hasStoredKey {
-                HStack(spacing: 10) {
-                    Label("API key saved", systemImage: "checkmark.shield.fill")
-                        .foregroundStyle(.green)
-                    Button("Delete Key") {
-                        viewModel.deleteAPIKey()
+                if viewModel.hasStoredKey {
+                    Spacer()
+                    HStack(spacing: 10) {
+                        Label("API key saved", systemImage: "checkmark.shield.fill")
+                            .foregroundStyle(.green)
+                        Button("Delete Key") {
+                            viewModel.deleteAPIKey()
+                        }
                     }
+                    .padding(.vertical, 4)
                 }
-                .padding(.vertical, 4)
-            } else {
+            }
+            .padding(.bottom, 4)
+
+            if !viewModel.hasStoredKey {
                 GroupBox("Gemini API Key") {
                     VStack(alignment: .leading, spacing: 8) {
                         SecureField("Enter your API key", text: $viewModel.apiKeyInput)
@@ -43,34 +48,34 @@ struct ContentView: View {
                 }
             }
 
-            Text("Prompt")
-                .font(.caption)
-                .foregroundStyle(.secondary)
+            // Text("Prompt")
+            //     .font(.caption)
+            //     .foregroundStyle(.secondary)
 
-            TextEditor(text: $viewModel.prompt)
-                .font(.body.monospaced())
-                .focused($promptIsFocused)
-                .frame(minHeight: 160)
-                .padding(8)
-                .background(
-                    RoundedRectangle(cornerRadius: 12)
-                        .fill(Color.black.opacity(0.08))
-                )
+            // TextEditor(text: $viewModel.prompt)
+            //     .font(.body.monospaced())
+            //     .focused($promptIsFocused)
+            //     .frame(minHeight: 160)
+            //     .padding(8)
+            //     .background(
+            //         RoundedRectangle(cornerRadius: 12)
+            //             .fill(Color.black.opacity(0.08))
+            //     )
 
             HStack(spacing: 12) {
-                Button {
-                    viewModel.submitPrompt()
-                } label: {
-                    if viewModel.isLoading {
-                        ProgressView()
-                            .controlSize(.small)
-                            .progressViewStyle(.circular)
-                    } else {
-                        Text("Send to Gemini")
-                    }
-                }
-                .keyboardShortcut(.return, modifiers: [.command])
-                .disabled(viewModel.isLoading)
+                // Button {
+                //     viewModel.submitPrompt()
+                // } label: {
+                //     if viewModel.isLoading {
+                //         ProgressView()
+                //             .controlSize(.small)
+                //             .progressViewStyle(.circular)
+                //     } else {
+                //         Text("Send to Gemini")
+                //     }
+                // }
+                // .keyboardShortcut(.return, modifiers: [.command])
+                // .disabled(viewModel.isLoading)
 
                 if viewModel.selectionResponseReady {
                     Button("Apply & Hide") {
@@ -104,14 +109,16 @@ struct ContentView: View {
                     .font(.body.monospaced())
                     .padding(8)
             }
-            .frame(maxHeight: .infinity)
+            .frame(height: 100)
             .background(
                 RoundedRectangle(cornerRadius: 12)
                     .fill(Color.black.opacity(0.05))
             )
         }
-        .padding(20)
-        .frame(minWidth: 460, minHeight: 520)
+        .padding(.top, -10)
+        .padding(.horizontal)
+        // .padding(20)
+        .frame(minWidth: 230, minHeight: 160)
         .background(.clear)
         .onAppear {
             promptIsFocused = true

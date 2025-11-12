@@ -138,9 +138,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         logState()
         window.titleVisibility = .hidden
         window.titlebarAppearsTransparent = true
-        window.isOpaque = false
-        window.alphaValue = 0.93
-        window.backgroundColor = NSColor.windowBackgroundColor.withAlphaComponent(0.75)
+        window.isOpaque = true
+        window.alphaValue = 1.0
         window.isMovableByWindowBackground = true
         window.level = .floating
         window.standardWindowButton(.miniaturizeButton)?.isHidden = true
