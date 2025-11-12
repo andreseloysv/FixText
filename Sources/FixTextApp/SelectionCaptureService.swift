@@ -9,6 +9,14 @@ final class SelectionCaptureService {
         let restoreClipboard: () -> Void
     }
 
+    /// Check if the app has accessibility permissions
+    nonisolated static func checkAccessibilityPermissions() -> Bool {
+        // Use string literal to avoid Swift 6 concurrency warnings with kAXTrustedCheckOptionPrompt
+        let options: NSDictionary = ["AXTrustedCheckOptionPrompt": true]
+        let accessEnabled = AXIsProcessTrustedWithOptions(options)
+        return accessEnabled
+    }
+
     private func logState(function: String = #function) {
         // LogManager.shared.log("---")
         // LogManager.shared.log("SelectionCaptureService state in \(function):")
@@ -17,6 +25,15 @@ final class SelectionCaptureService {
 
     func captureSelectedText(timeout: TimeInterval = 0.6) async -> CaptureResult? {
         logState()
+
+        // Verify accessibility permissions without prompting
+        let options: NSDictionary = ["AXTrustedCheckOptionPrompt": false]
+        let hasPermissions = AXIsProcessTrustedWithOptions(options)
+        guard hasPermissions else {
+            print("FixText: Missing Accessibility permissions - cannot capture text")
+            return nil
+        }
+
         let pasteboard = NSPasteboard.general
         let snapshot = snapshotPasteboardItems(pasteboard.pasteboardItems)
         let initialChangeCount = pasteboard.changeCount

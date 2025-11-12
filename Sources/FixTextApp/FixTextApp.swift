@@ -60,6 +60,10 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         logState()
         NSApp.setActivationPolicy(.regular)
         NSApp.activate(ignoringOtherApps: true)
+
+        // Check accessibility permissions on launch
+        _ = SelectionCaptureService.checkAccessibilityPermissions()
+
         HotKeyManager.shared.register(handler: { [weak self] in
             self?.toggleWindow()
         })

@@ -38,7 +38,7 @@ if [ -f "FixTextIcon.icns" ]; then
     /usr/libexec/PlistBuddy -c "Set :CFBundleIconFile AppIcon" "$APP_DIR/Contents/Info.plist"
 fi
 
-echo "Signing ad-hoc…"
-codesign --force --deep --sign - "$APP_DIR" >/dev/null || true
+echo "Signing ad-hoc with entitlements…"
+codesign --force --deep --sign - --entitlements FixText.entitlements "$APP_DIR" >/dev/null || true
 
 echo "Done! Open $APP_DIR or drag it to Applications."
