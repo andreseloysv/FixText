@@ -1,7 +1,6 @@
 # FixText
 
-FixText is a tiny macOS helper that fixes grammar and wording using Google’s Gemini models. Copy any text, tap a global shortcut, and your corrected text appears on the clipboard moments later.
-
+FixText is a macOS helper app that improves grammar and wording using Google’s Gemini models. Select any text, press a global shortcut, and your corrected version appears moments later. If you like the result, just hit Enter—done.
 ---
 
 ## For non-technical folks
