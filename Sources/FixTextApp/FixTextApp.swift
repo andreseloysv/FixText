@@ -43,20 +43,20 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     ]
 
     private func logState(function: String = #function) {
-        LogManager.shared.log("---")
-        LogManager.shared.log("AppDelegate state in \(function):")
-        LogManager.shared.log("  - window: \(window.debugDescription)")
-        LogManager.shared.log("  - viewModel: \(viewModel.debugDescription)")
-        LogManager.shared.log("  - pendingSelectionSession: \(pendingSelectionSession.debugDescription)")
-        LogManager.shared.log("  - confirmKeyTap: \(confirmKeyTap.debugDescription)")
-        LogManager.shared.log("  - confirmKeyRunLoopSource: \(confirmKeyRunLoopSource.debugDescription)")
-        LogManager.shared.log("  - confirmKeyTapRefcon: \(confirmKeyTapRefcon.debugDescription)")
-        viewModel?.logState()
-        LogManager.shared.log("---")
+        // LogManager.shared.log("---")
+        // LogManager.shared.log("AppDelegate state in \(function):")
+        // LogManager.shared.log("  - window: \(window.debugDescription)")
+        // LogManager.shared.log("  - viewModel: \(viewModel.debugDescription)")
+        // LogManager.shared.log("  - pendingSelectionSession: \(pendingSelectionSession.debugDescription)")
+        // LogManager.shared.log("  - confirmKeyTap: \(confirmKeyTap.debugDescription)")
+        // LogManager.shared.log("  - confirmKeyRunLoopSource: \(confirmKeyRunLoopSource.debugDescription)")
+        // LogManager.shared.log("  - confirmKeyTapRefcon: \(confirmKeyTapRefcon.debugDescription)")
+        // viewModel?.logState()
+        // LogManager.shared.log("---")
     }
 
     func applicationDidFinishLaunching(_ notification: Notification) {
-        LogManager.shared.deleteLogFile()
+        // LogManager.shared.deleteLogFile()
         logState()
         NSApp.setActivationPolicy(.regular)
         NSApp.activate(ignoringOtherApps: true)

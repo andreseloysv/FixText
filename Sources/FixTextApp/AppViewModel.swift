@@ -20,24 +20,24 @@ final class AppViewModel: ObservableObject {
     var responseHandlerToken: UUID?
     var selectionConfirmAction: (() -> Void)?
 
-    func logState(function: String = #function) {
-        LogManager.shared.log("---")
-        LogManager.shared.log("AppViewModel state in \(function):")
-        LogManager.shared.log("  - prompt: \(prompt)")
-        LogManager.shared.log("  - response: \(response)")
-        LogManager.shared.log("  - isLoading: \(isLoading)")
-        LogManager.shared.log("  - errorMessage: \(errorMessage ?? "nil")")
-        LogManager.shared.log("  - focusToken: \(focusToken)")
-        LogManager.shared.log("  - apiKeyInput: \(apiKeyInput)")
-        LogManager.shared.log("  - hasStoredKey: \(hasStoredKey)")
-        LogManager.shared.log("  - keyStatusMessage: \(keyStatusMessage ?? "nil")")
-        LogManager.shared.log("  - responseStatusMessage: \(responseStatusMessage ?? "nil")")
-        LogManager.shared.log("  - selectionResponseReady: \(selectionResponseReady)")
-        LogManager.shared.log("  - storedKey: \(storedKey ?? "nil")")
-        LogManager.shared.log("  - responseHandler: \(responseHandler.debugDescription)")
-        LogManager.shared.log("  - responseHandlerToken: \(responseHandlerToken.debugDescription)")
-        LogManager.shared.log("  - selectionConfirmAction: \(selectionConfirmAction.debugDescription)")
-        LogManager.shared.log("---")
+    private func logState(function: String = #function) {
+        // LogManager.shared.log("---")
+        // LogManager.shared.log("AppViewModel state in \(function):")
+        // LogManager.shared.log("  - prompt: \(prompt)")
+        // LogManager.shared.log("  - response: \(response)")
+        // LogManager.shared.log("  - isLoading: \(isLoading)")
+        // LogManager.shared.log("  - errorMessage: \(errorMessage ?? "nil")")
+        // LogManager.shared.log("  - focusToken: \(focusToken)")
+        // LogManager.shared.log("  - apiKeyInput: \(apiKeyInput)")
+        // LogManager.shared.log("  - hasStoredKey: \(hasStoredKey)")
+        // LogManager.shared.log("  - keyStatusMessage: \(keyStatusMessage ?? "nil")")
+        // LogManager.shared.log("  - responseStatusMessage: \(responseStatusMessage ?? "nil")")
+        // LogManager.shared.log("  - selectionResponseReady: \(selectionResponseReady)")
+        // LogManager.shared.log("  - storedKey: \(storedKey ?? "nil")")
+        // LogManager.shared.log("  - responseHandler: \(responseHandler.debugDescription)")
+        // LogManager.shared.log("  - responseHandlerToken: \(responseHandlerToken.debugDescription)")
+        // LogManager.shared.log("  - selectionConfirmAction: \(selectionConfirmAction.debugDescription)")
+        // LogManager.shared.log("---")
     }
 
     init() {

@@ -10,9 +10,9 @@ final class SelectionCaptureService {
     }
 
     private func logState(function: String = #function) {
-        LogManager.shared.log("---")
-        LogManager.shared.log("SelectionCaptureService state in \(function):")
-        LogManager.shared.log("---")
+        // LogManager.shared.log("---")
+        // LogManager.shared.log("SelectionCaptureService state in \(function):")
+        // LogManager.shared.log("---")
     }
 
     func captureSelectedText(timeout: TimeInterval = 0.6) async -> CaptureResult? {

@@ -11,13 +11,13 @@ final class HotKeyManager: @unchecked Sendable {
     private let hotKeySignature: FourCharCode = makeFourCharCode("FiTx")
 
     private func logState(function: String = #function) {
-        LogManager.shared.log("---")
-        LogManager.shared.log("HotKeyManager state in \(function):")
-        LogManager.shared.log("  - hotKeyRef: \(hotKeyRef.debugDescription)")
-        LogManager.shared.log("  - handlerRef: \(handlerRef.debugDescription)")
-        LogManager.shared.log("  - handlerRefcon: \(handlerRefcon.debugDescription)")
-        LogManager.shared.log("  - callback: \(callback.debugDescription)")
-        LogManager.shared.log("---")
+        // LogManager.shared.log("---")
+        // LogManager.shared.log("HotKeyManager state in \(function):")
+        // LogManager.shared.log("  - hotKeyRef: \(hotKeyRef.debugDescription)")
+        // LogManager.shared.log("  - handlerRef: \(handlerRef.debugDescription)")
+        // LogManager.shared.log("  - handlerRefcon: \(handlerRefcon.debugDescription)")
+        // LogManager.shared.log("  - callback: \(callback.debugDescription)")
+        // LogManager.shared.log("---")
     }
 
     func register(
@@ -40,7 +40,7 @@ final class HotKeyManager: @unchecked Sendable {
         )
 
         guard registrationStatus == noErr else {
-            LogManager.shared.log("Hot key registration failed with status \(registrationStatus)")
+            // LogManager.shared.log("Hot key registration failed with status \(registrationStatus)")
             return
         }
 
